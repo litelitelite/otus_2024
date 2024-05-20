@@ -26,16 +26,4 @@ resource "yandex_compute_instance" "nginx" {
   }
   
 }
-
-resource "local_file" "ansible_inventory" {
-  content = templatefile("inventory.tftmpl",
-    {
-     ansible_nginx_ip = "${yandex_compute_instance.nginx.network_interface.0.nat_ip_address}"
-    }
-  )
-  filename = "../ansible/inventory"
-
-  provisioner "local-exec" {
-    command = "sleep 20 && ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ubuntu -i ../ansible/inventory --private-key ${var.local_admin_private_key_path } ../ansible/provision.yml"
-  }
-}
+  

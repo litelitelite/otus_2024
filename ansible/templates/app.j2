@@ -1,0 +1,38 @@
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+app = Flask(__name__)
+
+# Настройка подключения к PostgreSQL
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:qwerty123@{{ groups['db'][0] }}:5432/flask_app'
+db = SQLAlchemy(app)
+
+class Hit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    count = db.Column(db.Integer, default=0)
+
+def create_all():
+    with app.app_context():
+        db.create_all()
+
+# Создание таблицы (только при первом запуске)
+create_all()
+# Создание таблицы (только при первом запуске)
+
+@app.route('/app/')
+def hello():
+    hit = Hit.query.first()
+    if hit is None:
+        hit = Hit(count=1)  # Создаем новую запись с начальным значением счетчика 1
+        db.session.add(hit)
+    else:
+        if hit.count is None:
+            hit.count = 1
+        else:
+            hit.count += 1  # Увеличиваем значение счетчика на 1
+    db.session.commit()
+    counter = str(hit.count)
+    return "This webpage has been viewed " + counter + " time(s)"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8000, debug=True)

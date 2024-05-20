@@ -3,9 +3,14 @@ key.json
 
 ## TF files
 terraform/terraform.tfvars
+terraform/locals.tf
 terraform/.terraform/*
 terraform/.terraform.lock.hcl
 terraform/errored.tfstate
 
 ## Ansible files
 ansible/inventory
+
+## Code
+
+/.vscode/settings.json
