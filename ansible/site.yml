@@ -1,0 +1,9 @@
+---
+- name: Install Nginx
+  ansible.builtin.import_playbook: nginx.yml
+
+- name: Install PGSQL
+  ansible.builtin.import_playbook: db.yml
+
+- name: Install python flask backend
+  ansible.builtin.import_playbook: backend.yml
