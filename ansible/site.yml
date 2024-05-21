@@ -1,9 +1,8 @@
 ---
-- name: Install Nginx
-  ansible.builtin.import_playbook: nginx.yml
+- name: Install target
+  ansible.builtin.import_playbook: target.yml
+  
+- name: Install initiator
+  ansible.builtin.import_playbook: initiator.yml
 
-- name: Install PGSQL
-  ansible.builtin.import_playbook: db.yml
 
-- name: Install python flask backend
-  ansible.builtin.import_playbook: backend.yml

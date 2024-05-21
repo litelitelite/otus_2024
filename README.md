@@ -1,7 +1,7 @@
 # lession-5-nginx
 
 
-## This code create an 4 VM in YC and provision Nginx, PostgreSQL and simple python flask app to it.
+## This code create an 4 VM in YC and provision iscsi initiator and 3 iscsi targets.
 
 ### Usage
 
@@ -17,13 +17,6 @@ Then run commands:
 
 Ansible inventory generate dynamicly
 
-## Check for APP and static content
-
-After deploy you can check app, or static content from Nginx load balancer public_ip by getting `nginx_instance_external_ip` from
-tf output and then put in on your browser. 
-
-`http://nginx_instance_external_ip/app` - path to simple flask page counter with RedisDB
-`http://nginx_instance_external_ip/html` - path to simple static page from app-nodes
 
 ### Destroy env
 
@@ -34,3 +27,9 @@ Run command `terraform destroy -var-file=terraform.tfvars -auto-approve`
 `ansible-core`
 `terraform`
 `yc`
+
+```
+collections:
+  - name: community.general
+  - name: ansible.posix
+  ```

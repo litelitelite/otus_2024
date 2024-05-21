@@ -33,3 +33,27 @@ variable "local_admin" {
   type        = string
   description = "Local admin name"
 }
+
+variable "yc_compute_instances_target" {
+    type = map(object({
+    name        = string
+    platform_id = string
+    cores       = number
+    memory      = number
+    size        = number
+    type        = string
+    nat         = bool
+  }))
+}
+
+variable "yc_compute_instances_initiator" {
+    type = map(object({
+    name        = string
+    platform_id = string
+    cores       = number
+    memory      = number
+    size        = number
+    type        = string
+    nat         = bool
+  }))
+}

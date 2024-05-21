@@ -2,10 +2,19 @@ repos:
 -   repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.3.0
     hooks:
-    -   id: check-yaml
+    #-   id: check-yaml
     -   id: end-of-file-fixer
     -   id: trailing-whitespace
 -   repo: https://github.com/psf/black
     rev: 22.10.0
     hooks:
     -   id: black
+-   repo: https://github.com/ansible/ansible-lint.git
+    rev: v6.10.0
+    hooks:
+    -   id: ansible-lint
+        files: \.(yaml|yml)$
+        name: Ansible Lint
+        description: Run configurations on .ansible-lint file
+        verbose: true
+        

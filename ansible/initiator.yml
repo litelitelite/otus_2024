@@ -1,0 +1,38 @@
+---
+- name: Install initiator
+  hosts: initiator
+  become: true
+  gather_facts: true
+  tasks:
+
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install ISCSI initiator
+      ansible.builtin.apt:
+        name: open-iscsi
+        state: present
+    
+    - name: Copy config file
+      ansible.builtin.template:
+        src: initiator.iscsi.j2
+        dest: /etc/iscsi/initiatorname.iscsi
+    
+    - name: Restart ISCSI service
+      ansible.builtin.service:
+        enabled: true
+        name:  iscsi
+        state: restarted
+      
+    - name: Discover targets on portal and login to the one available
+      community.general.open_iscsi:
+        show_nodes: true
+        discover: true
+        ip: "{{ groups['target'][0] }}"
+
+    - name: Login to target
+      community.general.open_iscsi:
+        login: true
+        target: iqn.2024-05.ru.otus:storage.target00

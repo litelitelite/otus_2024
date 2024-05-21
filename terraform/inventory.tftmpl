@@ -1,16 +1,16 @@
-[nginx]
-${ansible_nginx_ip}
+[target]
+%{ for ip in ansible_target_ip ~}
+${ip}
+%{ endfor ~}
 
-[db]
-${ansible_db_ip}
+[initiator]
+%{ for ip in ansible_initiator_ip ~}
+${ip}
+%{ endfor ~}
 
-[app]
-${ansible_app1_ip}
-${ansible_app2_ip}
 
-[web:children]
-nginx
-app 
+[initiator:children]
+initiator
 
-[db:children]
-db 
+[target:children]
+target 
