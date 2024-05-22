@@ -34,7 +34,7 @@ variable "local_admin" {
   description = "Local admin name"
 }
 
-variable "yc_compute_instances_target" {
+variable "yc_compute_instances" {
     type = map(object({
     name        = string
     platform_id = string
@@ -46,7 +46,7 @@ variable "yc_compute_instances_target" {
   }))
 }
 
-variable "yc_compute_instances_initiator" {
+variable "yc_compute_instances_master" {
     type = map(object({
     name        = string
     platform_id = string

@@ -1,16 +1,18 @@
-[target]
-%{ for ip in ansible_target_ip ~}
+[all]
+gfs2, gfs2-master
+
+[gfs2]
+%{ for ip in gfs2_external_ip ~}
 ${ip}
 %{ endfor ~}
 
-[initiator]
-%{ for ip in ansible_initiator_ip ~}
+[gfs2-master]
+%{ for ip in gfs2_master_external_ip ~}
 ${ip}
 %{ endfor ~}
 
+[gfs2:children]
+gfs2
 
-[initiator:children]
-initiator
-
-[target:children]
-target 
+[gfs2-master:children]
+gfs2-master

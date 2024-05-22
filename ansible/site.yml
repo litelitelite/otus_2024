@@ -1,8 +1,8 @@
 ---
-- name: Install target
-  ansible.builtin.import_playbook: target.yml
+- name: Install Pacemaker
+  ansible.builtin.import_playbook: pacemaker.yml
   
-- name: Install initiator
-  ansible.builtin.import_playbook: initiator.yml
+- name: Install GFS2
+  ansible.builtin.import_playbook: gfs2.yml
 
 
