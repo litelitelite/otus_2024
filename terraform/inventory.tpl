@@ -1,6 +1,3 @@
-[all]
-gfs2, gfs2-master
-
 [gfs2]
 %{ for ip in gfs2_external_ip ~}
 ${ip}
@@ -10,9 +7,3 @@ ${ip}
 %{ for ip in gfs2_master_external_ip ~}
 ${ip}
 %{ endfor ~}
-
-[gfs2:children]
-gfs2
-
-[gfs2-master:children]
-gfs2-master

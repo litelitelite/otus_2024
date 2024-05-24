@@ -1,8 +1,12 @@
 ---
-- name: Install Pacemaker
-  ansible.builtin.import_playbook: pacemaker.yml
-  
-- name: Install GFS2
-  ansible.builtin.import_playbook: gfs2.yml
+- name: Install iscsi-target
+  ansible.builtin.import_playbook: 1-iscsi-target.yml
 
+- name: Install iscsi-initiator
+  ansible.builtin.import_playbook: 2-iscsi-initiator.yml
 
+- name: Install pacemaker
+  ansible.builtin.import_playbook: 3-pacemaker.yml
+
+- name: Install gfs2
+  ansible.builtin.import_playbook: 4-gfs2.yml

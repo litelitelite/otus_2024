@@ -1,0 +1,24 @@
+---
+- name: Install target
+  hosts: gfs2-master
+  become: true
+  gather_facts: true
+  tasks:
+
+    - name: Install ISCSI target
+      ansible.builtin.yum:
+        name: targetcli
+        update_cache: yes
+
+    - name: Target settings
+      ansible.builtin.command:
+        "{{ item }}"
+      with_items:
+        - targetcli /backstores/block create disk01 /dev/vdb #/dev/vdb
+        - targetcli /iscsi create iqn.2024-05.ru.otus:storage.target00
+        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/luns create /backstores/block/disk01 lun=1
+        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/luns ls lun1
+        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/acls create iqn.2024-05.otus:{{ groups['gfs2'][0] }}
+        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/acls create iqn.2024-05.otus:{{ groups['gfs2'][1] }}
+        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/acls create iqn.2024-05.otus:{{ groups['gfs2'][2] }}
+        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1 set attribute authentication=0
