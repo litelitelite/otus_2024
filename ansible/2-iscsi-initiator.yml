@@ -1,0 +1,34 @@
+---
+- name: Install initiator
+  hosts: gfs2
+  become: true
+  gather_facts: true
+  tasks:
+
+    - name: Install ISCSI initiator
+      ansible.builtin.yum:
+        name: iscsi-initiator-utils.x86_64
+        state: present
+        update_cache: yes
+    
+    - name: Copy config file
+      ansible.builtin.template:
+        src: initiator.iscsi.j2
+        dest: /etc/iscsi/initiatorname.iscsi
+    
+    - name: Restart ISCSI service
+      ansible.builtin.service:
+        enabled: true
+        name:  iscsi
+        state: restarted
+      
+    - name: Discover targets on portal and login to the one available
+      community.general.open_iscsi:
+        show_nodes: true
+        discover: true
+        ip: "{{ groups['gfs2-master'][0] }}"
+
+    - name: Login to target
+      community.general.open_iscsi:
+        login: true
+        target: iqn.2024-05.ru.otus:storage.target00

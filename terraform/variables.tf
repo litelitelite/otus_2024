@@ -43,7 +43,14 @@ variable "yc_compute_instances" {
     size        = number
     type        = string
     nat         = bool
+    ip_address  = string
+
   }))
+}
+
+variable "otus_network_id" {
+  type = string
+  default = "enpq21jjhp8dgc45e594" ## Provide your network id
 }
 
 variable "yc_compute_instances_master" {

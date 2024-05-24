@@ -1,5 +1,5 @@
-data "yandex_compute_image" "ubuntu-20-04" {
-  family = "ubuntu-2004-lts"
+data "yandex_compute_image" "almalinux-9" {
+  family = "almalinux-9"
 }
 
 locals {

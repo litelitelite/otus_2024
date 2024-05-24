@@ -1,0 +1,121 @@
+---
+- name: Install GFS2
+  hosts: gfs2
+  become: true
+  gather_facts: true
+  tasks:
+
+    - name: Enable the High Availability repository
+      community.general.dnf_config_manager:
+        name: resilientstorage
+        state: enabled
+
+    - name: Install lvm and gfs2
+      ansible.builtin.dnf:
+        name: 
+          - gfs2-utils 
+          # - lvm2
+          - lvm2-lockd
+          - dlm
+          # - sanlock
+        update_cache: yes
+        state: present
+
+    - name: Update use_lvmlockd setting in lvm.conf
+      ansible.builtin.lineinfile:
+        path: /etc/lvm/lvm.conf
+        regexp: 'use_lvmlockd = 0'
+        line: 'use_lvmlockd = 1'
+        state: present
+    
+    # - name: Update host_id in lvmlocal.conf for node1
+    #   ansible.builtin.lineinfile:
+    #     path: /etc/lvm/lvmlocal.conf
+    #     regexp: '^.*# host_id = 0'
+    #     line: 'host_id = 1'
+    #     state: present
+    #   when: ansible_host == "{{ groups['gfs2'][0] }}"
+
+    # - name: Update host_id in lvmlocal.conf for node1
+    #   ansible.builtin.lineinfile:
+    #     path: /etc/lvm/lvmlocal.conf
+    #     regexp: '^.*# host_id = 0'
+    #     line: 'host_id = 2'
+    #     state: present
+    #   when: ansible_host == "{{ groups['gfs2'][1] }}"
+
+    # - name: Update host_id in lvmlocal.conf for node1
+    #   ansible.builtin.lineinfile:
+    #     path: /etc/lvm/lvmlocal.conf
+    #     regexp: '^.*# host_id = 0'
+    #     line: 'host_id = 3'
+    #     state: present
+    #   when: ansible_host == "{{ groups['gfs2'][2] }}"
+
+    - name: Ensure lvmlockd and dlm services is enabled and started
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: yes
+      with_items:
+        - lvmlockd
+        - dlm
+
+    - name: Setup cluster
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - pcs property set stonith-enabled=false
+        - pcs property set no-quorum-policy=freeze
+        # - pcs resource create dlm --group locking ocf:pacemaker:controld op monitor interval=30s on-fail=ignore --force
+        - pcs resource create lvmlockd --group locking ocf:heartbeat:lvmlockd op monitor interval=30s on-fail=ignore --force
+        - pcs resource clone locking interleave=true
+        - pcs status --full
+      when: ansible_host == "{{ groups['gfs2'][0] }}"
+      ignore_errors: true
+
+    - name: Create VG
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        # - pvcreate /dev/sda
+        - vgcreate --shared shared_vg1 /dev/sda --locktype dlm
+      when: ansible_host == "{{ groups['gfs2'][0] }}"
+      ignore_errors: true
+
+    - name: Start lock manager
+      ansible.builtin.command: "{{ item }}"
+      with_items: 
+        - vgchange --lockstart shared_vg1
+      when: ansible_host == "{{ groups['gfs2'][1] }}" or ansible_host == "{{ groups['gfs2'][2] }}"
+
+    - name: Creating shared lv and configure shared lv and shared fs resources
+      ansible.builtin.command: "{{ item }}"
+      with_items: 
+        - lvcreate --activate sy -L9G -n shared_lv1 shared_vg1
+        - echo 'yes' | mkfs.gfs2 -j3 -p lock_dlm -t otus_learning:gfs2 /dev/shared_vg1/shared_lv1 
+        - pcs resource create sharedlv1 --group shared_vg1 ocf:heartbeat:LVM-activate lvname=shared_lv1 vgname=shared_vg1 activation_mode=shared vg_access_mode=lvmlockd
+        - pcs resource clone shared_vg1 interleave=true
+        - pcs constraint order start locking-clone then shared_vg1-clone
+        - pcs constraint colocation add shared_vg1-clone with locking-clone
+      when: ansible_host == "{{ groups['gfs2'][0] }}"
+      ignore_errors: true
+    
+    - name: Output lvs
+      ansible.builtin.command: lvs
+      register: lvs_output
+    
+    - name: Debug lvs
+      ansible.builtin.debug:
+        var: lvs_output
+    
+    - name: Create sharedfs resource
+      ansible.builtin.command: pcs resource create sharedfs1 --group shared_vg1 ocf:heartbeat:Filesystem device="/dev/shared_vg1/shared_lv1" directory="/mnt/gfs1" fstype="gfs2" options=noatime op monitor interval=10s on-fail=ignore
+      when: ansible_host == "{{ groups['gfs2'][0] }}"
+    
+    - name: Output mount | grep gfs2
+      ansible.builtin.command: mount | grep gfs2
+      register: mount_output
+    
+    - name: Debug mount
+      ansible.builtin.debug:
+        var: mount_output
+

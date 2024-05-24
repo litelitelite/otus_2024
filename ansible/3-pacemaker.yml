@@ -1,0 +1,116 @@
+---
+- name: Install pcs
+  hosts: gfs2
+  become: true
+  gather_facts: true
+  vars:
+    new_password: $1$SomeSalt$IqiRgqcqumNFgOCk7BG7I.
+  tasks:
+
+    - name: Enable the High Availability repository
+      community.general.dnf_config_manager:
+        name: highavailability
+        state: enabled
+
+    - name: Install necessary packages for High Availability
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - corosync 
+        - pacemaker
+        - pcs
+        - psmisc
+        - policycoreutils-python3
+        - chrony
+        - firewalld
+    
+    - name: Configure chrony to sync with NTP server
+      ansible.builtin.lineinfile:
+        path: /etc/chrony.conf
+        line: "{{ item }}"
+        insertafter: '^#server 0.centos.pool.ntp.org iburst'
+      loop:
+        - server msc iburst
+    
+    - name: Restart chrony service
+      ansible.builtin.service:
+        name: chronyd
+        state: restarted
+    
+    - name: Start firewalld service
+      ansible.builtin.service:
+        name: firewalld
+        state: started
+        enabled: true
+
+    - name: Set password for pacemaker on all nodes
+      ansible.builtin.user:
+        name: hacluster
+        password: "{{ new_password }}"
+
+    - name: Enable and start pcsd.service
+      ansible.builtin.systemd:
+        state: started
+        enabled: true
+        name: pcsd
+
+    - name: Set a hostname
+      ansible.builtin.hostname:
+        name: node1
+      when: ansible_host == "{{ groups['gfs2'][0] }}"
+
+    - name: Set a hostname
+      ansible.builtin.hostname:
+        name: node2
+      when: ansible_host == "{{ groups['gfs2'][1] }}"
+
+    - name: Set a hostname
+      ansible.builtin.hostname:
+        name: node3
+      when: ansible_host == "{{ groups['gfs2'][2] }}"
+
+    - name: Append additional host entries to /etc/hosts file
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "{{ item }}"
+        state: present
+      with_items:
+        # - "{{ groups['gfs2-master'][0] }} node1"
+        - "10.129.0.30 node1"
+        - "10.129.0.31 node2"
+        - "10.129.0.32 node3"
+
+    - name: Firewall
+      ansible.builtin.command: "{{ item }}"
+      with_items:
+        - firewall-cmd --permanent --add-service=high-availability
+        - firewall-cmd --add-service=high-availability
+
+- name: Setup cluster 
+  hosts: "{{ groups['gfs2'][0] }}"
+  become: true
+  gather_facts: true
+  tasks:
+
+    - name: Auth cluster nodes
+      ansible.builtin.command: pcs host auth -u hacluster -p ChangeIt node1 node2 node3
+
+    - name: Setup cluster
+      ansible.builtin.command: pcs cluster setup otus_learning node1 node2 node3 --force
+      ignore_errors: true
+
+    - name: Enable cluster
+      ansible.builtin.command: pcs cluster enable --all
+
+    - name: Starting cluster
+      ansible.builtin.command: pcs cluster start --all
+
+    - name: Get cluster state
+      community.general.pacemaker_cluster:
+        state: online
+      register: pcs_status
+
+    - name: Debug cluster status
+      ansible.builtin.debug:
+        var: pcs_status

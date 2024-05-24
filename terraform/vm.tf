@@ -12,13 +12,14 @@ resource "yandex_compute_instance" "gfs2-node" {
     initialize_params {
       size     = each.value.size
       type     = each.value.type
-      image_id = data.yandex_compute_image.ubuntu-20-04.id
+      image_id = data.yandex_compute_image.almalinux-9.id
     }
   }
 
   network_interface {
     subnet_id = data.yandex_vpc_subnet.otus-learning-ru-central1-b.id
     nat       = each.value.nat
+    ip_address = each.value.ip_address
   }
 
   metadata = {
@@ -37,17 +38,17 @@ resource "yandex_compute_instance" "gfs2-node-master" {
     memory = each.value.memory
   }
 
+  secondary_disk {
+      disk_id =  "${yandex_compute_disk.iscsi-disk.id}"
+      device_name = "vdb"
+    }
   boot_disk {
     initialize_params {
       size     = each.value.size
       type     = each.value.type
-      image_id = data.yandex_compute_image.ubuntu-20-04.id
+      image_id = data.yandex_compute_image.almalinux-9.id
     }
   }
-
-  secondary_disk {
-        disk_id =  "${yandex_compute_disk.iscsi-disk.id}"
-      }
 
   network_interface {
     subnet_id = data.yandex_vpc_subnet.otus-learning-ru-central1-b.id
