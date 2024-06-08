@@ -7,6 +7,7 @@ terraform/locals.tf
 terraform/.terraform/*
 terraform/.terraform.lock.hcl
 terraform/errored.tfstate
+terraform/backend.tf
 
 ## Ansible files
 ansible/inventory
