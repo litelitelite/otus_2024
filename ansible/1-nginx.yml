@@ -1,0 +1,27 @@
+---
+- name: Install nginx
+  hosts: nginx
+  become: true
+  gather_facts: true
+  tasks:
+
+    - name: Install Nginx
+      ansible.builtin.yum:
+        name: nginx
+        state: present
+        update_cache: yes
+    
+    - name: Copy config file
+      ansible.builtin.template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/nginx.conf
+
+    - name: Enable and start Nginx service
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Disable SE for nginx
+      ansible.builtin.command: setsebool -P httpd_can_network_connect 1
+

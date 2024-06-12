@@ -6,56 +6,90 @@ local_admin_private_key_path    = "~/.ssh/id_rsa" # provide here your private ke
 local_admin_public_key_path     = "~/.ssh/id_rsa.pub" # provide here your pub key
 local_admin                     = "almalinux"
 
-yc_compute_instances = {
+yc_compute_instances_nginx = {
 
-    gfs2-node1 = {
+    nginx-node1 = {
 
-        name        = "gfs2-node1"
+        name        = "nginx-node1"
         platform_id = "standard-v3"
         cores       = 2
         memory      = 2
         size        = 10
         type        = "network-hdd"
         nat         = true
-        ip_address  = "10.129.0.30"
+        ip_address  = "10.0.1.3"
         }
     
-    gfs2-node2 = {
+    nginx-node2 = {
 
-        name        = "gfs2-node2"
+        name        = "nginx-node2"
         platform_id = "standard-v3"
         cores       = 2
         memory      = 2
         size        = 10
         type        = "network-hdd"
         nat         = true
-        ip_address  = "10.129.0.31"
-        }
+        ip_address  = "10.0.1.4"
+    }
+}
+
+yc_compute_instances_backend = {
+
+    backend-node1 = {
+
+        name        = "backend-node1"
+        platform_id = "standard-v3"
+        cores       = 2
+        memory      = 2
+        size        = 10
+        type        = "network-hdd"
+        nat         = true
+        ip_address  = "10.0.1.5"
+    }
     
-    gfs2-node3 = {
+    backend-node2 = {
 
-        name        = "gfs2-node3"
+        name        = "backend-node2"
         platform_id = "standard-v3"
         cores       = 2
         memory      = 2
         size        = 10
         type        = "network-hdd"
         nat         = true
-        ip_address  = "10.129.0.32"
-        }
+        ip_address  = "10.0.1.6"
+    }
+}
+
+yc_compute_instances_db = {
+
+    db-node = {
+
+        name        = "db-node"
+        platform_id = "standard-v3"
+        cores       = 2
+        memory      = 2
+        size        = 10
+        type        = "network-hdd"
+        nat         = true
+        ip_address  = "10.0.1.7"
     }
 
 
-yc_compute_instances_master = {
+}
 
-    gfs2-master = {
+yc_compute_instances_iscsi = {
 
-        name        = "gfs2-master"
+    iscsi-node = {
+
+        name        = "iscsi-node"
         platform_id = "standard-v3"
         cores       = 2
         memory      = 2
         size        = 10
         type        = "network-hdd"
         nat         = true
-        }
+        ip_address  = "10.0.1.8"
+    }
+
+
 }

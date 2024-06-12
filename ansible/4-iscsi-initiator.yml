@@ -1,6 +1,6 @@
 ---
 - name: Install initiator
-  hosts: gfs2
+  hosts: "{{ groups['backend'] }}"
   become: true
   gather_facts: true
   tasks:
@@ -26,7 +26,7 @@
       community.general.open_iscsi:
         show_nodes: true
         discover: true
-        ip: "{{ groups['gfs2-master'][0] }}"
+        ip: "{{ groups['iscsi'][0] }}"
 
     - name: Login to target
       community.general.open_iscsi:

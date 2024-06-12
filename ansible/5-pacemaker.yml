@@ -1,6 +1,6 @@
 ---
 - name: Install pcs
-  hosts: gfs2
+  hosts: backend
   become: true
   gather_facts: true
   vars:
@@ -23,7 +23,7 @@
         - psmisc
         - policycoreutils-python3
         - chrony
-        - firewalld
+        # - firewalld
     
     - name: Configure chrony to sync with NTP server
       ansible.builtin.lineinfile:
@@ -38,11 +38,11 @@
         name: chronyd
         state: restarted
     
-    - name: Start firewalld service
-      ansible.builtin.service:
-        name: firewalld
-        state: started
-        enabled: true
+    # - name: Start firewalld service
+    #   ansible.builtin.service:
+    #     name: firewalld
+    #     state: started
+    #     enabled: true
 
     - name: Set password for pacemaker on all nodes
       ansible.builtin.user:
@@ -58,17 +58,12 @@
     - name: Set a hostname
       ansible.builtin.hostname:
         name: node1
-      when: ansible_host == "{{ groups['gfs2'][0] }}"
+      when: ansible_host == "{{ groups['backend'][0] }}"
 
     - name: Set a hostname
       ansible.builtin.hostname:
         name: node2
-      when: ansible_host == "{{ groups['gfs2'][1] }}"
-
-    - name: Set a hostname
-      ansible.builtin.hostname:
-        name: node3
-      when: ansible_host == "{{ groups['gfs2'][2] }}"
+      when: ansible_host == "{{ groups['backend'][1] }}"
 
     - name: Append additional host entries to /etc/hosts file
       ansible.builtin.lineinfile:
@@ -77,27 +72,28 @@
         state: present
       with_items:
         # - "{{ groups['gfs2-master'][0] }} node1"
-        - "10.129.0.30 node1"
-        - "10.129.0.31 node2"
-        - "10.129.0.32 node3"
+        - "10.0.1.5 node1"
+        - "10.0.1.6 node2"
 
-    - name: Firewall
-      ansible.builtin.command: "{{ item }}"
-      with_items:
-        - firewall-cmd --permanent --add-service=high-availability
-        - firewall-cmd --add-service=high-availability
+    # - name: Firewall
+    #   ansible.builtin.command: "{{ item }}"
+    #   with_items:
+    #     - firewall-cmd --permanent --add-service=high-availability
+    #     - firewall-cmd --add-service=high-availability
+    #     - firewall-cmd --zone=public --add-port=8000/tcp --permanent
+    #     - firewall-cmd --zone=public --add-port=80/tcp --permanent
 
 - name: Setup cluster 
-  hosts: "{{ groups['gfs2'][0] }}"
+  hosts: "{{ groups['backend'][0] }}"
   become: true
   gather_facts: true
   tasks:
 
     - name: Auth cluster nodes
-      ansible.builtin.command: pcs host auth -u hacluster -p ChangeIt node1 node2 node3
+      ansible.builtin.command: pcs host auth -u hacluster -p ChangeIt node1 node2
 
     - name: Setup cluster
-      ansible.builtin.command: pcs cluster setup otus_learning node1 node2 node3 --force
+      ansible.builtin.command: pcs cluster setup otus_learning node1 node2 --force
       ignore_errors: true
 
     - name: Enable cluster

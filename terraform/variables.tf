@@ -34,7 +34,7 @@ variable "local_admin" {
   description = "Local admin name"
 }
 
-variable "yc_compute_instances" {
+variable "yc_compute_instances_nginx" {
     type = map(object({
     name        = string
     platform_id = string
@@ -44,16 +44,10 @@ variable "yc_compute_instances" {
     type        = string
     nat         = bool
     ip_address  = string
-
   }))
 }
 
-variable "otus_network_id" {
-  type = string
-  default = "enpq21jjhp8dgc45e594" ## Provide your network id
-}
-
-variable "yc_compute_instances_master" {
+variable "yc_compute_instances_backend" {
     type = map(object({
     name        = string
     platform_id = string
@@ -62,5 +56,42 @@ variable "yc_compute_instances_master" {
     size        = number
     type        = string
     nat         = bool
+    ip_address  = string
   }))
+}
+
+variable "yc_compute_instances_db" {
+    type = map(object({
+    name        = string
+    platform_id = string
+    cores       = number
+    memory      = number
+    size        = number
+    type        = string
+    nat         = bool
+    ip_address  = string
+  }))
+}
+
+variable "yc_compute_instances_iscsi" {
+    type = map(object({
+    name        = string
+    platform_id = string
+    cores       = number
+    memory      = number
+    size        = number
+    type        = string
+    nat         = bool
+    ip_address  = string
+  }))
+}
+
+variable "otus_network_name" {
+  type = string
+  default = "otus-learning" ## Provide your network name
+}
+
+variable "otus_subnet_name" {
+  type = string
+  default = "otus-learning-ru-central1-b" ## Provide your subnet name
 }

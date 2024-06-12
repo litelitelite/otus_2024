@@ -1,6 +1,6 @@
 ---
 - name: Install target
-  hosts: gfs2-master
+  hosts: "{{ groups['iscsi'][0] }}"
   become: true
   gather_facts: true
   tasks:
@@ -18,7 +18,6 @@
         - targetcli /iscsi create iqn.2024-05.ru.otus:storage.target00
         - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/luns create /backstores/block/disk01 lun=1
         - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/luns ls lun1
-        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/acls create iqn.2024-05.otus:{{ groups['gfs2'][0] }}
-        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/acls create iqn.2024-05.otus:{{ groups['gfs2'][1] }}
-        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/acls create iqn.2024-05.otus:{{ groups['gfs2'][2] }}
+        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/acls create iqn.2024-05.otus:{{ groups['backend'][0] }}
+        - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1/acls create iqn.2024-05.otus:{{ groups['backend'][1] }}
         - targetcli /iscsi/iqn.2024-05.ru.otus:storage.target00/tpg1 set attribute authentication=0

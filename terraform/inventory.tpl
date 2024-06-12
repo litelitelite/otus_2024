@@ -1,9 +1,20 @@
-[gfs2]
-%{ for ip in gfs2_external_ip ~}
+[db]
+%{ for ip in db_external_ip ~}
 ${ip}
 %{ endfor ~}
 
-[gfs2-master]
-%{ for ip in gfs2_master_external_ip ~}
+[backend]
+%{ for ip in backend_external_ip ~}
 ${ip}
 %{ endfor ~}
+
+[nginx]
+%{ for ip in nginx_external_ip ~}
+${ip}
+%{ endfor ~}
+
+[iscsi]
+%{ for ip in iscsi_external_ip ~}
+${ip}
+%{ endfor ~}
+

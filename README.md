@@ -1,10 +1,10 @@
 # lession-4-pacemaker-gfs2
 
 
-## This code create an 4 VM in YC and provision pacemaker, iscsi target and 3 iscsi initiators with gfs2.
+## This code create an 6 VM in YC (2 nginx, 2 backend, 1 db and 1 iscsi) and provision pacemaker, iscsi target and iscsi initiators with gfs2.
+## There is backend app with flask behind nginx frontend.
 
 ## Note, that this code works only with almalinux9.
-## Fencing is disabled, cause fence-agents for YC does not exists.
 
 ### Usage
 
@@ -21,8 +21,6 @@ Then run commands:
 
 Ansible inventory generate dynamicly
 
-You can see examples of success run in `examples/` dir.
-
 ### Destroy env
 
 Run command `terraform destroy -var-file=terraform.tfvars -auto-approve`
@@ -38,3 +36,14 @@ collections:
   - name: community.general
   - name: ansible.posix
   ```
+### Check APP and static content
+
+After deploy you can check app, or static content from yandex cloud load balancer public_ip.
+
+- http://yc_lb_external_ip/app - path to simple flask page counter with PostgreSQL.
+- http://yc_lb_external_ip/html - path to simple static page from app-nodes.
+
+### Bugs
+
+Pacemaker can be installed with issue on sharedfs with no reason (only through ansible).
+In that case, you need manually connect to backend nodes and provide command of `6-gfs2.yml` playbook in console. Command `vgchange -a y` can be helpful.

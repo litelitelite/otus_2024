@@ -1,6 +1,6 @@
 ---
 - name: Install GFS2
-  hosts: gfs2
+  hosts: backend
   become: true
   gather_facts: true
   tasks:
@@ -27,7 +27,7 @@
         state: present
 
 - name: Setup cluster
-  hosts: "{{ groups['gfs2'][0] }}"
+  hosts: "{{ groups['backend'][0] }}"
   become: true
   gather_facts: true
   tasks:
@@ -40,43 +40,84 @@
         - pcs resource create dlm --group locking systemd:dlm op monitor interval=30s on-fail=ignore
         - pcs resource clone locking interleave=true
         - pcs resource create lvmlockd --group locking ocf:heartbeat:lvmlockd op monitor interval=30s on-fail=ignore
+    
+    - name: Pause for 30 sec
+      ansible.builtin.pause:
+        seconds: 30
 
     - name: Create PV
       ansible.builtin.command: pvcreate /dev/sda
 
+    - name: Pause for 10 sec
+      ansible.builtin.pause:
+        seconds: 10
+
     - name: Create VG
       ansible.builtin.command: vgcreate --shared shared_vg1 /dev/sda --locktype dlm
 
+    - name: Pause for 5 sec
+      ansible.builtin.pause:
+        seconds: 5
+
+- name: Start locking on node1
+  hosts: "{{ groups['backend'][0] }}"
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Start lock manager
+      ansible.builtin.command: vgchange --lockstart shared_vg1
+
+    - name: Pause for 10 sec
+      ansible.builtin.pause:
+        seconds: 10
+
 - name: Start locking on node2
-  hosts: "{{ groups['gfs2'][1] }}"
+  hosts: "{{ groups['backend'][1] }}"
   become: true
   gather_facts: true
   tasks:
     - name: Start lock manager
       ansible.builtin.command: vgchange --lockstart shared_vg1
 
-- name: Start locking on node3
-  hosts: "{{ groups['gfs2'][2] }}"
-  become: true
-  gather_facts: true
-  tasks:
-    - name: Start lock manager
-      ansible.builtin.command: vgchange --lockstart shared_vg1
-
+    - name: Pause for 10 sec
+      ansible.builtin.pause:
+        seconds: 10
+    
 - name: Setup FS
-  hosts: "{{ groups['gfs2'][0] }}"
+  hosts: "{{ groups['backend'][0] }}"
   become: true
   gather_facts: true
   tasks:
+
     - name: Creating shared lv and configure shared lv and shared fs resources
       ansible.builtin.command: "{{ item }}"
       with_items: 
         - lvcreate --activate sy -L9G -n shared_lv1 shared_vg1
-        - echo 'yes' | mkfs.gfs2 -j3 -p lock_dlm -t otus_learning:gfs2 /dev/shared_vg1/shared_lv1 
-        - pcs resource create sharedlv1 --group shared_vg1 ocf:heartbeat:LVM-activate lvname=shared_lv1 vgname=shared_vg1 activation_mode=shared vg_access_mode=lvmlockd
+        - echo 'yes' | mkfs.gfs2 -j3 -p lock_dlm -t otus_learning:gfs2 /dev/shared_vg1/shared_lv1
+
+    - name: Pause for 10 sec
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Creating shared lv and configure shared lv and shared fs resources
+      ansible.builtin.command: pcs resource create sharedlv1 --group shared_vg1 ocf:heartbeat:LVM-activate lvname=shared_lv1 vgname=shared_vg1 activation_mode=shared vg_access_mode=lvmlockd
+      
+    - name: Pause for 30 sec
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Creating shared lv and configure shared lv and shared fs resources
+      ansible.builtin.command: "{{ item }}"
+      with_items: 
         - pcs resource clone shared_vg1 interleave=true
         - pcs constraint order start locking-clone then shared_vg1-clone
-        - pcs constraint colocation add shared_vg1-clone with locking-clone
+
+    - name: Pause for 30 sec
+      ansible.builtin.pause:
+        seconds: 30
+
+    - name: Creating shared lv and configure shared lv and shared fs resources
+      ansible.builtin.command: pcs constraint colocation add shared_vg1-clone with locking-clone
     
     - name: Output lvs
       ansible.builtin.command: lvs
@@ -87,7 +128,11 @@
         var: lvs_out
     
     - name: Create sharedfs resource
-      ansible.builtin.command: pcs resource create sharedfs1 --group shared_vg1 ocf:heartbeat:Filesystem device="/dev/shared_vg1/shared_lv1" directory="/mnt/gfs1" fstype="gfs2" options=noatime op monitor interval=10s on-fail=ignore
+      ansible.builtin.command: pcs resource create sharedfs1 --group shared_vg1 ocf:heartbeat:Filesystem device="/dev/shared_vg1/shared_lv1" directory="/mnt/www/html" fstype="gfs2" options=noatime op monitor interval=10s on-fail=ignore
+    
+    - name: Pause for 30 sec
+      ansible.builtin.pause:
+        seconds: 30
     
     - name: Check FS 
       ansible.builtin.command: df -h
@@ -96,3 +141,4 @@
     - name: Debug df -h
       ansible.builtin.debug:
         var: df_out.stdout_lines
+        
