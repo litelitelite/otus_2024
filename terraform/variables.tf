@@ -33,3 +33,55 @@ variable "local_admin" {
   type        = string
   description = "Local admin name"
 }
+
+
+variable "yc_compute_instances_backend" {
+    type = map(object({
+    name        = string
+    platform_id = string
+    cores       = number
+    memory      = number
+    size        = number
+    type        = string
+    nat         = bool
+    ip_address  = string
+  }))
+}
+
+
+variable "yc_compute_instances_nginx" {
+    type = map(object({
+    name        = string
+    platform_id = string
+    cores       = number
+    memory      = number
+    size        = number
+    type        = string
+    nat         = bool
+    ip_address  = string
+  }))
+}
+
+
+variable "yc_compute_instances_db" {
+    type = map(object({
+    name        = string
+    platform_id = string
+    cores       = number
+    memory      = number
+    size        = number
+    type        = string
+    nat         = bool
+    ip_address  = string
+  }))
+}
+
+variable "otus_network_name" {
+  type = string
+  default = "otus-learning" ## Provide your network name
+}
+
+variable "otus_subnet_name" {
+  type = string
+  default = "otus-learning-ru-central1-b" ## Provide your subnet name
+}

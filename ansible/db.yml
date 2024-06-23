@@ -1,104 +1,270 @@
-- name: Install PGSQL
+- name: Install Percona
   hosts: db
   become: true
   gather_facts: true
+  vars_files: vars/main.yml
   tasks:
-    - name: Update apt cache
+
+    - name: Set a hostname
+      ansible.builtin.hostname:
+        name: pxc1
+      when: ansible_host == "{{ groups['db'][0] }}"
+
+    - name: Set a hostname
+      ansible.builtin.hostname:
+        name: pxc2
+      when: ansible_host == "{{ groups['db'][1] }}"
+
+    - name: Set a hostname
+      ansible.builtin.hostname:
+        name: pxc3
+      when: ansible_host == "{{ groups['db'][2] }}"
+
+    - name: Append additional host entries to /etc/hosts file
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - "10.0.1.5 backend1"
+        - "10.0.1.6 backend2"
+        - "10.0.1.7 pxc1"
+        - "10.0.1.8 pxc2"
+        - "10.0.1.9 pxc3"
+
+    - name: "Check if percona-server is installed"
+      ansible.builtin.command: dpkg -l | grep -i percona-server-server
+      failed_when: false
+      changed_when: false
+      check_mode: false
+      register: percona_server_is_installed
+
+    - name: "Check for innodb_log_file_size setting (Ubuntu)"
+      ansible.builtin.shell: 
+        cmd: grep -E ^innodb_log_file_size /etc/mysql/my.cnf | awk -F= '{ print $2}' | sed 's/\s//g'
+        removes: "/etc/mysql/my.cnf"
+      register: configured_innodb_log_file_size
+      changed_when: False
+
+    # - name: "Abort when innodb_log_file_size changes"
+    #   ansible.builtin.fail:
+    #     msg: "The existing MySQL server has innodb_log_file_size={{ configured_innodb_log_file_size.stdout }}, but your are trying to set it to {{ mysql_innodb_log_file_size }}. Please, change this value for the variable in either ansible or the server itself. See: https://dev.mysql.com/doc/refman/5.6/en/innodb-redo-log.html"
+    #   when:
+    #     - percona_server_is_installed.stdout|trim != ""
+    #     - not configured_innodb_log_file_size.stdout | regex_search('^skipped')
+    #     - configured_innodb_log_file_size.stdout != mysql_innodb_log_file_size
+   
+    - name: "Install gnupg"
+      ansible.builtin.apt:
+        name: gnupg2
+        update_cache: yes
+
+    - name: "Install percona-release package"
+      ansible.builtin.apt:
+        deb: "https://repo.percona.com/apt/percona-release_latest.{{ ansible_distribution_release }}_all.deb"
+
+    - name: "Update apt cache"
       ansible.builtin.apt:
         update_cache: yes
-        cache_valid_time: 3600
 
-    - name: Install required packages
+    - name: "Configure Percona repo for PXC"
+      ansible.builtin.shell: percona-release enable-only pxc-80 release
+
+    - name: "Configure Percona repo for tools"
+      ansible.builtin.shell: percona-release enable tools release
+
+    - name: "Update apt cache"
       ansible.builtin.apt:
-        name:
-        - pip
-        - libpq-dev
+        update_cache: yes
 
-    - name: Install pip required packages
-      ansible.builtin.pip:
-        name:
-          - psycopg2
+# https://www.percona.com/doc/percona-server/LATEST/installation/apt_repo.html
+#- name: "Enable Percona repository (Percona version >= 8)"
+#  command: "percona-release setup ps{{ mysql_version_major }}{{ mysql_version_minor }}"
+#  when: mysql_version_major|int >= 8
+#  changed_when: False     # TODO: check for task idempotency
 
-    - name: Install PostgreSQL
+    - name: "Install python-is-python3 (Ubuntu >= Focal/20.04)"
+      ansible.builtin.apt:
+        name: "python-is-python3"
+      when:
+        - ansible_distribution_version is version_compare('20.04', '>=')
+
+    - ansible.builtin.debug:
+        msg: "ansible_python_interpreter major version: {{ ansible_python.version.major }}"
+
+    - name: "Install package dependencies for ansible MySQL modules (python 2)"
+      ansible.builtin.apt:
+        name: "python-mysqldb"
+      when:
+        - ansible_python.version.major == 2     # version is a number, do not quote
+
+    - name: "Install package dependencies for ansible MySQL modules (python 3)"
       ansible.builtin.apt:
         name: 
-          - postgresql
-          ### https://github.com/georchestra/ansible/issues/55#issuecomment-588313638
-          - acl 
-        state: present
+          - "python3-pymysql"
+          - "python3-mysqldb"
+      when:
+        - ansible_python.version.major == 3     # version is a number, do not quote
 
-    - name: Upd global config
-      ansible.builtin.lineinfile:
-        dest: /etc/postgresql/12/main/postgresql.conf
-        regexp: "^#?unix_socket_directories.+$"
-        line: "unix_socket_directories = '/var/run/postgresql'"
-        state: "{{ item.state | default('present') }}"
+    - name: "Install percona cluster packages, ProxySQL and dependencies on Ubuntu"
+      ansible.builtin.apt:
+        name:
+          - "percona-xtradb-cluster"
+          - "percona-xtradb-cluster-client"
+          - "proxysql2"
+        state: "present"
+      when: mysql_version_major|int >= 8
 
-    - name: Upd global config with listen address
-      ansible.builtin.lineinfile:
-        dest: /etc/postgresql/12/main/postgresql.conf
-        regexp: "^#?listen_addresses.+$"
-        line: "listen_addresses = '*'"
-        state: "{{ item.state | default('present') }}"
+    - name: "Install mc, percona-toolkit and Percona Xtrabackup"
+      ansible.builtin.apt:
+        name:
+          - percona-xtrabackup-80
+          - mc
+          - percona-toolkit
+          - zstd
+          - lz4
+        update_cache: yes
 
-    - name: Restart PostgreSQL service
-      ansible.builtin.systemd:
-        name: postgresql
-        state: restarted
-        enabled: true
-
-    - name: Update pg_hba.conf to use "md5" authentication
-      community.general.postgresql_pg_hba:
-        dest: /etc/postgresql/12/main/pg_hba.conf
-        contype: "{{ item.type }}"
-        databases: "{{ item.database | default('all') }}"
-        users: "{{ item.user | default('all') }}"
-        address: "{{ item.address | default('all') }}"
-        method: "{{ item.auth_method | default('md5')}}"
-        state: "{{ item.state | default('present') }}"
-      with_items: 
-        - {type: local, database: all, user: postgres, auth_method: peer}
-        - {type: local, database: all, user: all, auth_method: peer}
-        - {type: host, database: all, user: all, address: '0.0.0.0/0', auth_method: md5}
-        - {type: host, database: all, user: all, address: '::1/128', auth_method: md5}
-
-    - name: Ensure PGSQL unix socket dirs exist
+    - name: "Adjust permissions of datadir"
       ansible.builtin.file:
-        path: /var/run/postgresql
-        state: directory
-        owner: postgres
-        group: postgres
-        mode: 02775
+        path: "{{ mysql_datadir }}"
+        owner: "mysql"
+        group: "mysql"
+        mode: 0700
+        state: "directory"
 
-    - name: Restart PostgreSQL service
-      ansible.builtin.systemd:
-        name: postgresql
+    - name: "Update the my.cnf"
+      ansible.builtin.template: "src=etc_mysql_my.cnf.j2 dest=/etc/mysql/my.cnf owner=root mode=0644"
+      register: "config_file"
+      # notify:
+      #   - "Restart percona"
+
+    - name: "Update the mysqld.cnf"
+      ansible.builtin.template: "src=etc_mysql_mysqld.cnf.j2 dest=/etc/mysql/mysql.conf.d/mysqld.cnf owner=root mode=0644"
+      register: "config_file"
+      # notify:
+      #   - "Restart percona"
+
+    # - name: "Ensure that percona is running and enabled"
+    #   service:
+    #     name: "mysql"
+    #     state: "started"
+    #     enabled: "yes"
+    #   register: mysql_service
+
+    # This service restart is needed when changing default mysql_datadir, mysql_native_password
+    # and other settings. So better restart when the my.cnf file changes
+    # Restart when my.cnf has changed and it has not been restarted by the above task
+    - name: "Restart mysql to apply changes done in my.cnf file"
+      ansible.builtin.service:
+        name: mysql
         state: restarted
-        
-    - name: Create database user
-      become_user: postgres
-      become: true
-      vars:
-        ansbile_ssh_pipelining: true
-      community.postgresql.postgresql_user:
-        name: admin
-        password: qwerty123
-        login_host: localhost
-        login_user: postgres
-        login_password: postgres
-        login_unix_socket: /var/run/postgresql
-        state: present
+      when:
+        - config_file.changed
+        - mysql_service is defined
+        - not mysql_service.changed
 
-    - name: Create database
-      become_user: postgres
-      become: true
-      vars:
-        ansbile_ssh_pipelining: true
-      community.postgresql.postgresql_db:
-        name: flask_app
-        state: present
+    - name: Copy the same SSL certs to all nodes (./ssl dir from project)
+      ansible.builtin.copy:
+        src: ssl/
+        dest: /var/lib/mysql/
+        owner: mysql
+        group: mysql
+        mode: u=rw,g=rw,o=
 
-    - name: Restart PostgreSQL service
-      ansible.builtin.systemd:
-        name: postgresql
-        state: restarted
+    - name:  Stop MySQL
+      ansible.builtin.service:
+        name: mysql
+        state: stopped
+      when: ansible_host == "{{ groups['db'][0] }}"
+
+    - name: "Copy .my.cnf file into the root home folder"
+      ansible.builtin.template:
+        src: root-my-cnf.j2
+        dest: /root/.my.cnf
+        owner: root
+        group: root
+        mode: 0600
+
+    - name:  Start bootstrap
+      ansible.builtin.service:
+        name: mysql@bootstrap.service
+        state: started
+      when: ansible_host == "{{ groups['db'][0] }}"
+
+    - name:  Start MySQL
+      ansible.builtin.service:
+        name: mysql
+        state: started
+      when: ansible_host != "{{ groups['db'][0] }}"
+    
+    - name: "Set the root password"
+      community.mysql.mysql_user:
+        name: root
+        host: "{{ item }}"
+        password: "{{ mysql_root_password }}"
+        check_implicit_admin: yes
+        state: present
+        login_unix_socket: "{% if ansible_os_family in ['RedHat', 'Rocky'] %}/var/lib/mysql/mysql.sock{% else %}/var/run/mysqld/mysqld.sock{% endif %}"
+
+      with_items:
+        - "{{ ansible_default_ipv4.address }}"
+        - "127.0.0.1"
+        - "::1"
+        - "localhost"
+
+    - name: "Ensure anonymous users are not in the database"
+      community.mysql.mysql_user:
+        name: ''
+        host: "{{ item }}"
+        state: absent
+        login_unix_socket: "{% if ansible_os_family in ['RedHat', 'Rocky'] %}/var/lib/mysql/mysql.sock{% else %}/var/run/mysqld/mysqld.sock{% endif %}"
+      with_items:
+        - "{{ ansible_hostname }}"
+        - "localhost"
+
+    - name: "Remove the test database"
+      community.mysql.mysql_db:
+        name: test
+        state: absent
+
+    - name: "Make sure the MySQL databases are present"
+      community.mysql.mysql_db:
+        name: "{{ item.name }}"
+        collation: "{{ item.collation | default('utf8_general_ci') }}"
+        encoding: "{{ item.encoding | default('utf8') }}"
+        state: "present"
+        login_unix_socket: "{% if ansible_os_family in ['RedHat','Rocky'] %}/var/lib/mysql/mysql.sock{% else %}/var/run/mysqld/mysqld.sock{% endif %}"
+      with_items: "{{ mysql_databases }}"
+      when: ansible_host == "{{ groups['db'][0] }}"
+
+    - name: "Load timezone database into MySQL"
+      ansible.builtin.shell: "mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql mysql"
+      when:
+        - "mysql_timezone_info|bool"
+
+    - name: "Make sure the MySQL users are present"
+      community.mysql.mysql_user:
+        name: "{{ item.name }}"
+        password: "{{ item.pass | default('pass') }}"
+        priv: "{{ item.priv | default('*.*:ALL') }}"
+        state: "present"
+        host: "{{ item.host | default('localhost') }}"
+        login_unix_socket: "{% if ansible_os_family in ['RedHat', 'Rocky'] %}/var/lib/mysql/mysql.sock{% else %}/var/run/mysqld/mysqld.sock{% endif %}"
+      with_items: "{{ mysql_users }}"
+      no_log: "true"
+      when: ansible_host == "{{ groups['db'][0] }}"
+
+    # - name: Grant all privileges on flask_app database to root user
+    #   community.mysql.mysql_user:
+    #     name: root
+    #     host: 10.0.1.5
+    #     priv: '*.*:ALL'
+    #     append_privs: yes
+    #     password: "{{ mysql_root_password }}"
+      
+  # handlers:
+  #   - name: "Restart percona"
+  #     ansible.builtin.service: 
+  #       name: mysql 
+  #       state: restarted

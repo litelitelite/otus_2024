@@ -1,7 +1,7 @@
-# lession-5-nginx
+# lession-10-mysql
 
 
-## This code create an 4 VM in YC and provision Nginx, Redis and simple python flask app to it.
+## This code create an 4 VM in YC and provision Nginx, MySQL Percona cluster and simple python flask app.
 
 ### Usage
 
@@ -10,10 +10,11 @@
 - Provide `bucket`, `access_key` and `secret_key` in backend.tf
 - Provide needed variables in terraform.tfvars file
 
-Then run commands:
+Then run this commands from `terraform` directory:
 
 - `terraform init -backend-config=state.name -reconfigure`
 - `terraform apply -var-file=terraform.tfvars -auto-approve`
+- `ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ubuntu -i ../ansible/inventory --private-key ~/.ssh/id_rsa ../ansible/site.yml`
 
 Ansible inventory generate dynamicly
 
