@@ -3,8 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-# Настройка подключения к MySQL
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://root:Otus321$@10.0.1.7/flask_app'
+# Настройка подключения к PostgreSQL
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://admin:qwerty123@localhost:5000/flask_app'
 db = SQLAlchemy(app)
 
 class Hit(db.Model):

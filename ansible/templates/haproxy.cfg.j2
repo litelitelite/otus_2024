@@ -1,0 +1,33 @@
+global
+    log /dev/log local0
+    log /dev/log local1 notice
+    maxconn 4096
+    user haproxy
+    group haproxy
+    daemon
+
+defaults
+    log global
+    mode tcp
+    option tcplog
+    timeout connect 5000ms
+    timeout client 50000ms
+    timeout server 50000ms
+
+listen stats
+    mode http
+    bind *:7000
+    stats enable
+    stats uri /
+
+frontend pgsql_front
+    bind *:5000
+    default_backend pgsql_back
+
+backend pgsql_back
+    balance roundrobin
+    option httpchk GET /primary
+    http-check expect status 200
+    server pgsql1 10.0.1.7:5432 maxconn 100 check port 8008 inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+    server pgsql2 10.0.1.8:5432 maxconn 100 check port 8008 inter 3s fall 3 rise 2 on-marked-down shutdown-sessions
+    server pgsql3 10.0.1.9:5432 maxconn 100 check port 8008 inter 3s fall 3 rise 2 on-marked-down shutdown-sessions

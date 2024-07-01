@@ -12,7 +12,7 @@ resource "yandex_compute_instance" "backend" {
     initialize_params {
       size     = each.value.size
       type     = each.value.type
-      image_id = data.yandex_compute_image.ubuntu-20-04.id
+      image_id = var.image_id
     }
   }
 

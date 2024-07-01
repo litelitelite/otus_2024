@@ -1,4 +1,4 @@
-- name: Install Percona
+- name: Install PGSQL Cluster
   hosts: db
   become: true
   gather_facts: true
@@ -7,17 +7,17 @@
 
     - name: Set a hostname
       ansible.builtin.hostname:
-        name: pxc1
+        name: pgdb1
       when: ansible_host == "{{ groups['db'][0] }}"
 
     - name: Set a hostname
       ansible.builtin.hostname:
-        name: pxc2
+        name: pgdb2
       when: ansible_host == "{{ groups['db'][1] }}"
 
     - name: Set a hostname
       ansible.builtin.hostname:
-        name: pxc3
+        name: pgdb3
       when: ansible_host == "{{ groups['db'][2] }}"
 
     - name: Append additional host entries to /etc/hosts file
@@ -28,243 +28,120 @@
       with_items:
         - "10.0.1.5 backend1"
         - "10.0.1.6 backend2"
-        - "10.0.1.7 pxc1"
-        - "10.0.1.8 pxc2"
-        - "10.0.1.9 pxc3"
-
-    - name: "Check if percona-server is installed"
-      ansible.builtin.command: dpkg -l | grep -i percona-server-server
-      failed_when: false
-      changed_when: false
-      check_mode: false
-      register: percona_server_is_installed
-
-    - name: "Check for innodb_log_file_size setting (Ubuntu)"
-      ansible.builtin.shell: 
-        cmd: grep -E ^innodb_log_file_size /etc/mysql/my.cnf | awk -F= '{ print $2}' | sed 's/\s//g'
-        removes: "/etc/mysql/my.cnf"
-      register: configured_innodb_log_file_size
-      changed_when: False
-
-    # - name: "Abort when innodb_log_file_size changes"
-    #   ansible.builtin.fail:
-    #     msg: "The existing MySQL server has innodb_log_file_size={{ configured_innodb_log_file_size.stdout }}, but your are trying to set it to {{ mysql_innodb_log_file_size }}. Please, change this value for the variable in either ansible or the server itself. See: https://dev.mysql.com/doc/refman/5.6/en/innodb-redo-log.html"
-    #   when:
-    #     - percona_server_is_installed.stdout|trim != ""
-    #     - not configured_innodb_log_file_size.stdout | regex_search('^skipped')
-    #     - configured_innodb_log_file_size.stdout != mysql_innodb_log_file_size
+        - "10.0.1.7 pgdb1"
+        - "10.0.1.8 pgdb2"
+        - "10.0.1.9 pgdb3"
    
-    - name: "Install gnupg"
-      ansible.builtin.apt:
-        name: gnupg2
-        update_cache: yes
-
-    - name: "Install percona-release package"
-      ansible.builtin.apt:
-        deb: "https://repo.percona.com/apt/percona-release_latest.{{ ansible_distribution_release }}_all.deb"
-
-    - name: "Update apt cache"
-      ansible.builtin.apt:
-        update_cache: yes
-
-    - name: "Configure Percona repo for PXC"
-      ansible.builtin.shell: percona-release enable-only pxc-80 release
-
-    - name: "Configure Percona repo for tools"
-      ansible.builtin.shell: percona-release enable tools release
-
-    - name: "Update apt cache"
-      ansible.builtin.apt:
-        update_cache: yes
-
-# https://www.percona.com/doc/percona-server/LATEST/installation/apt_repo.html
-#- name: "Enable Percona repository (Percona version >= 8)"
-#  command: "percona-release setup ps{{ mysql_version_major }}{{ mysql_version_minor }}"
-#  when: mysql_version_major|int >= 8
-#  changed_when: False     # TODO: check for task idempotency
-
-    - name: "Install python-is-python3 (Ubuntu >= Focal/20.04)"
-      ansible.builtin.apt:
-        name: "python-is-python3"
-      when:
-        - ansible_distribution_version is version_compare('20.04', '>=')
-
-    - ansible.builtin.debug:
-        msg: "ansible_python_interpreter major version: {{ ansible_python.version.major }}"
-
-    - name: "Install package dependencies for ansible MySQL modules (python 2)"
-      ansible.builtin.apt:
-        name: "python-mysqldb"
-      when:
-        - ansible_python.version.major == 2     # version is a number, do not quote
-
-    - name: "Install package dependencies for ansible MySQL modules (python 3)"
+    - name: "Install required packages"
       ansible.builtin.apt:
         name: 
-          - "python3-pymysql"
-          - "python3-mysqldb"
-      when:
-        - ansible_python.version.major == 3     # version is a number, do not quote
-
-    - name: "Install percona cluster packages, ProxySQL and dependencies on Ubuntu"
-      ansible.builtin.apt:
-        name:
-          - "percona-xtradb-cluster"
-          - "percona-xtradb-cluster-client"
-          - "proxysql2"
-        state: "present"
-      when: mysql_version_major|int >= 8
-
-    - name: "Install mc, percona-toolkit and Percona Xtrabackup"
-      ansible.builtin.apt:
-        name:
-          - percona-xtrabackup-80
-          - mc
-          - percona-toolkit
-          - zstd
-          - lz4
+          - python3
+          - python3-dev
+          - python3-pip
+          - gcc
+          - libpq-dev
         update_cache: yes
 
-    - name: "Adjust permissions of datadir"
-      ansible.builtin.file:
-        path: "{{ mysql_datadir }}"
-        owner: "mysql"
-        group: "mysql"
-        mode: 0700
-        state: "directory"
-
-    - name: "Update the my.cnf"
-      ansible.builtin.template: "src=etc_mysql_my.cnf.j2 dest=/etc/mysql/my.cnf owner=root mode=0644"
-      register: "config_file"
-      # notify:
-      #   - "Restart percona"
-
-    - name: "Update the mysqld.cnf"
-      ansible.builtin.template: "src=etc_mysql_mysqld.cnf.j2 dest=/etc/mysql/mysql.conf.d/mysqld.cnf owner=root mode=0644"
-      register: "config_file"
-      # notify:
-      #   - "Restart percona"
-
-    # - name: "Ensure that percona is running and enabled"
-    #   service:
-    #     name: "mysql"
-    #     state: "started"
-    #     enabled: "yes"
-    #   register: mysql_service
-
-    # This service restart is needed when changing default mysql_datadir, mysql_native_password
-    # and other settings. So better restart when the my.cnf file changes
-    # Restart when my.cnf has changed and it has not been restarted by the above task
-    - name: "Restart mysql to apply changes done in my.cnf file"
-      ansible.builtin.service:
-        name: mysql
-        state: restarted
-      when:
-        - config_file.changed
-        - mysql_service is defined
-        - not mysql_service.changed
-
-    - name: Copy the same SSL certs to all nodes (./ssl dir from project)
-      ansible.builtin.copy:
-        src: ssl/
-        dest: /var/lib/mysql/
-        owner: mysql
-        group: mysql
-        mode: u=rw,g=rw,o=
-
-    - name:  Stop MySQL
-      ansible.builtin.service:
-        name: mysql
-        state: stopped
-      when: ansible_host == "{{ groups['db'][0] }}"
-
-    - name: "Copy .my.cnf file into the root home folder"
-      ansible.builtin.template:
-        src: root-my-cnf.j2
-        dest: /root/.my.cnf
-        owner: root
-        group: root
-        mode: 0600
-
-    - name:  Start bootstrap
-      ansible.builtin.service:
-        name: mysql@bootstrap.service
-        state: started
-      when: ansible_host == "{{ groups['db'][0] }}"
-
-    - name:  Start MySQL
-      ansible.builtin.service:
-        name: mysql
-        state: started
-      when: ansible_host != "{{ groups['db'][0] }}"
+    - name: "Install required packages through pip"
+      ansible.builtin.pip:
+        name: 
+          - testresources
+          - setuptools
+          - psycopg2
     
-    - name: "Set the root password"
-      community.mysql.mysql_user:
-        name: root
-        host: "{{ item }}"
-        password: "{{ mysql_root_password }}"
-        check_implicit_admin: yes
+    - name: "Install required packages"
+      ansible.builtin.apt:
+        name: 
+          - postgresql
+          ### https://github.com/georchestra/ansible/issues/55#issuecomment-588313638
+          - acl 
+          - python3-etcd
+          - patroni
+          - etcd
+          # - patroni-etcd
+          - watchdog
+        update_cache: yes
+
+    - name: Stop PostgreSQL service
+      ansible.builtin.systemd:
+        name: postgresql
+        state: stopped
+        enabled: false
+        
+    - name: Copy etcd config
+      ansible.builtin.template:
+        src: etcd.conf.j2
+        dest: /etc/default/etcd
+    
+    - name: "Restart etcd"
+      ansible.builtin.service:
+        name: etcd
+        state: restarted
+        enabled: true
+    
+    - name: "Make dirs for patroni"
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: postgres
+        group: postgres
+        recurse: yes
+        mode: 0750
+      become: yes
+      with_items:
+        - /etc/patroni
+        - /etc/patroni/cluster
+
+    - name: "Chown to dir"
+      ansible.builtin.file:
+        path: /etc/patroni
+
+    - name: Copy patroni config
+      ansible.builtin.template:
+        src: patroni.conf.j2
+        dest: /etc/patroni/config.yml
+
+    - name: "Start patroni on first node"
+      ansible.builtin.service:
+        name: patroni
+        state: started
+        enabled: true
+      when: ansible_host == "{{ groups['db'][0] }}"
+    
+    - name: Pause
+      ansible.builtin.pause:
+        seconds: 20
+        
+    - name: Create database user
+      become_user: postgres
+      become: true
+      vars:
+        ansbile_ssh_pipelining: true
+      community.postgresql.postgresql_user:
+        name: admin
+        password: qwerty123
+        login_host: localhost
+        login_user: postgres
+        login_password: postgres
+        login_unix_socket: /var/run/postgresql
         state: present
-        login_unix_socket: "{% if ansible_os_family in ['RedHat', 'Rocky'] %}/var/lib/mysql/mysql.sock{% else %}/var/run/mysqld/mysqld.sock{% endif %}"
-
-      with_items:
-        - "{{ ansible_default_ipv4.address }}"
-        - "127.0.0.1"
-        - "::1"
-        - "localhost"
-
-    - name: "Ensure anonymous users are not in the database"
-      community.mysql.mysql_user:
-        name: ''
-        host: "{{ item }}"
-        state: absent
-        login_unix_socket: "{% if ansible_os_family in ['RedHat', 'Rocky'] %}/var/lib/mysql/mysql.sock{% else %}/var/run/mysqld/mysqld.sock{% endif %}"
-      with_items:
-        - "{{ ansible_hostname }}"
-        - "localhost"
-
-    - name: "Remove the test database"
-      community.mysql.mysql_db:
-        name: test
-        state: absent
-
-    - name: "Make sure the MySQL databases are present"
-      community.mysql.mysql_db:
-        name: "{{ item.name }}"
-        collation: "{{ item.collation | default('utf8_general_ci') }}"
-        encoding: "{{ item.encoding | default('utf8') }}"
-        state: "present"
-        login_unix_socket: "{% if ansible_os_family in ['RedHat','Rocky'] %}/var/lib/mysql/mysql.sock{% else %}/var/run/mysqld/mysqld.sock{% endif %}"
-      with_items: "{{ mysql_databases }}"
       when: ansible_host == "{{ groups['db'][0] }}"
 
-    - name: "Load timezone database into MySQL"
-      ansible.builtin.shell: "mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql mysql"
-      when:
-        - "mysql_timezone_info|bool"
-
-    - name: "Make sure the MySQL users are present"
-      community.mysql.mysql_user:
-        name: "{{ item.name }}"
-        password: "{{ item.pass | default('pass') }}"
-        priv: "{{ item.priv | default('*.*:ALL') }}"
-        state: "present"
-        host: "{{ item.host | default('localhost') }}"
-        login_unix_socket: "{% if ansible_os_family in ['RedHat', 'Rocky'] %}/var/lib/mysql/mysql.sock{% else %}/var/run/mysqld/mysqld.sock{% endif %}"
-      with_items: "{{ mysql_users }}"
-      no_log: "true"
+    - name: Create database
+      become_user: postgres
+      become: true
+      vars:
+        ansbile_ssh_pipelining: true
+      community.postgresql.postgresql_db:
+        name: flask_app
+        state: present
       when: ansible_host == "{{ groups['db'][0] }}"
 
-    # - name: Grant all privileges on flask_app database to root user
-    #   community.mysql.mysql_user:
-    #     name: root
-    #     host: 10.0.1.5
-    #     priv: '*.*:ALL'
-    #     append_privs: yes
-    #     password: "{{ mysql_root_password }}"
-      
-  # handlers:
-  #   - name: "Restart percona"
-  #     ansible.builtin.service: 
-  #       name: mysql 
-  #       state: restarted
+    - name: "Start patroni on all nodes"
+      ansible.builtin.service:
+        name: patroni
+        state: restarted
+        enabled: true
+      when: ansible_host != "{{ groups['db'][0] }}"
+
+

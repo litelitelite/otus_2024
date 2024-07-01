@@ -1,7 +1,7 @@
-# lession-10-mysql
+# lession-11-pgsql-patroni
 
 
-## This code create an 4 VM in YC and provision Nginx, MySQL Percona cluster and simple python flask app.
+## This code create VMs in YC and provision Nginx, PGSQL patroni cluster and simple python flask app with haproxy balancer.
 
 ### Usage
 
@@ -25,6 +25,46 @@ tf output and then put in on your browser.
 
 `http://nginx_instance_external_ip/app` - path to simple flask page counter with RedisDB
 `http://nginx_instance_external_ip/html` - path to simple static page from app-nodes
+
+Also you can check it by access external YC load_balancer_ip
+
+Examples:
+
+`http://158.160.156.201/html` or `http://158.160.156.201/app/`
+
+## Check HAPROXY
+
+See backend_external_ip
+
+Example:
+
+http://158.160.65.231:7000/
+
+## Check PATRONI status
+
+
+See any endpoint in 8008 port in external_ip_pgdb
+
+Example:
+
+http://158.160.76.21:8008/
+
+```
+{"state": "running", "postmaster_start_time": "2024-07-01 16:33:05.820991+00:00", "role": "replica", "server_version": 140012, "xlog": {"received_location": 67491496, "replayed_location": 67491496, "replayed_timestamp": "2024-07-01 16:39:07.265311+00:00", "paused": false}, "timeline": 2, "dcs_last_seen": 1719852036, "database_system_identifier": "7386673811145480129", "patroni": {"version": "2.1.3", "scope": "TestCluster"}}
+```
+
+http://158.160.66.42:8008/
+
+```
+{"state": "running", "postmaster_start_time": "2024-07-01 14:27:23.986593+00:00", "role": "master", "server_version": 140012, "xlog": {"location": 67491496}, "timeline": 2, "replication": [{"usename": "admin", "application_name": "etcd2", "client_addr": "10.0.1.8", "state": "streaming", "sync_state": "async", "sync_priority": 0}, {"usename": "admin", "application_name": "etcd1", "client_addr": "10.0.1.7", "state": "streaming", "sync_state": "async", "sync_priority": 0}], "dcs_last_seen": 1719852076, "database_system_identifier": "7386673811145480129", "patroni": {"version": "2.1.3", "scope": "TestCluster"}}
+```
+
+### Test failover methods
+
+- You can stop patroni on any pgdb node
+- You can stop any app node
+- You can stop any nginx balancer
+- You can stop any haproxy balancer
 
 ### Destroy env
 

@@ -8,6 +8,12 @@ variable "cloud_id" {
   description = "Yandex Cloud cloud_id"
 }
 
+variable "image_id" {
+  type        = string
+  description = "Yandex Cloud image_id"
+  default     = "fd83m7rp3r4l12c2keph"
+}
+
 variable "folder_id" {
   type        = string
   description = "Yandex Cloud folder_id"
