@@ -1,0 +1,67 @@
+---
+- name: Install Vector
+  hosts: nginx, db, app
+  become: true
+  gather_facts: true
+  tasks:
+
+    - name: Install Vector repo
+      ansible.builtin.shell: |
+        bash -c "$(curl -L https://setup.vector.dev)"
+
+    - name: Update APT package list
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install Vector
+      ansible.builtin.apt:
+        name: vector
+        state: present
+
+- name: Copy Vector config nginx
+  hosts: nginx
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Copy config file nginx
+      ansible.builtin.template:
+        src: vector-nginx.yaml.j2
+        dest: /etc/vector/vector.yaml
+      
+    - name: Restart Vector service
+      ansible.builtin.service:
+        name: vector
+        state: restarted
+        enabled: true
+
+- name: Copy Vector config db
+  hosts: db
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Copy config file db
+      ansible.builtin.template:
+        src: vector-db.yaml.j2
+        dest: /etc/vector/vector.yaml
+    
+    - name: Restart Vector service
+      ansible.builtin.service:
+        name: vector
+        state: restarted
+        enabled: true
+
+- name: Copy Vector config app
+  hosts: app
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Copy config file app
+      ansible.builtin.template:
+        src: vector-app.yaml.j2
+        dest: /etc/vector/vector.yaml
+
+    - name: Restart Vector service
+      ansible.builtin.service:
+        name: vector
+        state: restarted
+        enabled: true

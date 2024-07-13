@@ -1,0 +1,19 @@
+sources:
+  nginx_logs:
+    type: file
+    include: ["/var/log/nginx/*.log"]
+
+sinks:
+  elasticsearch:
+    type: elasticsearch
+    inputs: ["nginx_logs"]
+    endpoints:
+      - "https://10.0.1.10:9200"
+    bulk:
+      index: "nginx-logs-%Y-%m-%d"
+    tls:
+      verify_certificate: false
+    auth:
+      strategy: "basic"
+      user: "admin"
+      password: "qwerty123"

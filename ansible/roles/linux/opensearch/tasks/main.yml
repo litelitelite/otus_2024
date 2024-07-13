@@ -1,0 +1,98 @@
+---
+
+- name: Set a hostname
+  ansible.builtin.hostname:
+    name: os1
+  when: ansible_host == "{{ groups['elk'][0] }}"
+
+- name: Set a hostname
+  ansible.builtin.hostname:
+    name: os2
+  when: ansible_host == "{{ groups['elk'][1] }}"
+
+- name: Set a hostname
+  ansible.builtin.hostname:
+    name: os3
+  when: ansible_host == "{{ groups['elk'][2] }}"
+
+- name: Append additional host entries to /etc/hosts file
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"
+    state: present
+  with_items:
+    - "10.0.1.5 backend1"
+    - "10.0.1.6 backend2"
+    - "10.0.1.7 pgdb1"
+    - "10.0.1.8 pgdb2"
+    - "10.0.1.9 pgdb3"
+    - "10.0.1.10 os1"
+    - "10.0.1.11 os2"
+    - "10.0.1.12 os3"
+
+- name: Tune the system settings
+  ansible.builtin.import_tasks: tune.yml
+
+- name: Include opensearch installation
+  ansible.builtin.import_tasks: opensearch.yml
+
+- name: Include security plugin for opensearch
+  ansible.builtin.import_tasks: security.yml
+
+# After the cluster forms successfully for the first time,
+# remove the cluster.initial_master_nodes setting from each nodes' configuration.
+- name: Remove `cluster.initial_master_nodes` setting from configuration
+  ansible.builtin.command: sed -i '/cluster.initial_master_nodes/d' "{{ os_conf_dir }}/opensearch.yml"
+
+- name: Make sure opensearch is started
+  ansible.builtin.service:
+    name: opensearch
+    state: started
+    enabled: true
+
+- name: Get all the installed ES plugins
+  ansible.builtin.command: "{{ os_plugin_bin_path }} list"
+  register: list_plugins
+
+- name: Show all the installed ES plugins
+  ansible.builtin.debug:
+    msg: "{{ list_plugins.stdout }}"
+
+- name: Wait for opensearch to startup
+  ansible.builtin.wait_for:
+    host: "{{ item }}"
+    port: "{{ os_api_port }}"
+    delay: 5
+    connect_timeout: 1
+    timeout: 120
+  with_items:
+    - "{{ groups['elk'][0] }}"
+    - "{{ groups['elk'][1] }}"
+    - "{{ groups['elk'][2] }}"
+
+- name: Check the opensearch status
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9200/_cluster/health?pretty"
+    user: admin
+    password: "{{ admin_password }}"
+    validate_certs: false
+  register: os_status
+
+- name: Show the opensearch status
+  debug:
+    msg: "{{ os_status.json }}"
+  failed_when: "'number_of_nodes' not in os_status.json"
+
+- name: Verify the roles of opensearch cluster nodes
+  ansible.builtin.uri:
+    url: "https://{{ inventory_hostname }}:9200/_cat/nodes?v"
+    user: admin
+    password: "{{ admin_password }}"
+    validate_certs: false
+  register: os_roles
+  run_once: true
+
+- name: Show the roles of opensearch cluster nodes
+  debug:
+    msg: "{{ os_roles }}"
+  run_once: true

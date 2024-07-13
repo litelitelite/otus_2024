@@ -82,6 +82,19 @@ variable "yc_compute_instances_db" {
   }))
 }
 
+variable "yc_compute_instances_elk" {
+    type = map(object({
+    name        = string
+    platform_id = string
+    cores       = number
+    memory      = number
+    size        = number
+    type        = string
+    nat         = bool
+    ip_address  = string
+  }))
+}
+
 variable "otus_network_name" {
   type = string
   default = "otus-learning" ## Provide your network name

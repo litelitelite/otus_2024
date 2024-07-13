@@ -1,7 +1,7 @@
-# lession-11-pgsql-patroni
+# lession-13-elk
 
 
-## This code create VMs in YC and provision Nginx, PGSQL patroni cluster and simple python flask app with haproxy balancer.
+## This code create VMs in YC and provision Nginx, PGSQL patroni cluster and simple python flask app with haproxy balancer. Also here's OpenSearch monitoring, which collect logs from all nodes through vector. For installing OpenSearch using https://github.com/opensearch-project/ansible-playbook.
 
 ### Usage
 
@@ -65,6 +65,10 @@ http://158.160.66.42:8008/
 - You can stop any app node
 - You can stop any nginx balancer
 - You can stop any haproxy balancer
+
+### Test OpenSearch cluster
+
+curl https://localhost:9200 -u 'admin:qwerty123' --insecure
 
 ### Destroy env
 

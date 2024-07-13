@@ -1,0 +1,27 @@
+cluster.name: "{{ os_cluster_name }}"
+
+node.name: {% if ansible_default_ipv4.address == "10.0.1.10"-%}
+"os1"
+{% elif ansible_default_ipv4.address == "10.0.1.11" -%}
+"os2"
+{% elif ansible_default_ipv4.address == "10.0.1.12" -%}
+"os3"
+{% endif -%}
+
+network.host: "{{ ansible_default_ipv4.address }}"
+
+http.port: 9200
+
+bootstrap.memory_lock: true
+compatibility.override_main_response_version: true
+discovery.seed_hosts: ["10.0.1.10", "10.0.1.11", "10.0.1.12"]
+
+cluster.initial_master_nodes: ["{{ os_master_nodes }}"]
+
+node.roles: {% if ansible_default_ipv4.address == "10.0.1.10"-%}
+"data, master"
+{% elif ansible_default_ipv4.address == "10.0.1.11" -%}
+"data, ingest"
+{% elif ansible_default_ipv4.address == "10.0.1.12" -%}
+"data, ingest"
+{% endif -%}

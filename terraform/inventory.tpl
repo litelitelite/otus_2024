@@ -13,9 +13,17 @@ ${ip}
 ${ip}
 %{ endfor ~}
 
+[elk]
+%{ for ip in ansible_elk_ip ~}
+${ip}
+%{ endfor ~}
+
 [web:children]
 nginx
 app 
 
 [db:children]
 db 
+
+[elk:children]
+elk
