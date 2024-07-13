@@ -7,3 +7,20 @@
 
 - name: Install python flask backend
   ansible.builtin.import_playbook: backend.yml
+
+- name: Install OpenSearch
+  hosts: elk
+  gather_facts: true
+  become: true
+  roles:
+    - { role: linux/opensearch }
+
+- name: Install OpenSearch dashboards
+  hosts:  "{{ groups['elk'][0] }}"
+  gather_facts: true
+  become: true
+  roles:
+    - { role: linux/dashboards }
+
+- name: Install vector
+  ansible.builtin.import_playbook: vector.yml

@@ -9,7 +9,10 @@ resource "local_file" "ansible_inventory" {
     ]
         ansible_app_ip = [
       for instance_key, instance in yandex_compute_instance.backend : instance.network_interface.0.nat_ip_address
-    ]        
+    ]
+        ansible_elk_ip = [
+      for instance_key, instance in yandex_compute_instance.elk : instance.network_interface.0.nat_ip_address
+    ]
     }
   )
   filename = "../ansible/inventory"

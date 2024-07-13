@@ -64,7 +64,7 @@ yc_compute_instances_db = {
 
     db-node1 = {
 
-        name        = "pxc1"
+        name        = "pgdb1"
         platform_id = "standard-v3"
         cores       = 2
         memory      = 2
@@ -76,7 +76,7 @@ yc_compute_instances_db = {
 
     db-node2 = {
 
-        name        = "pxc2"
+        name        = "pgdb2"
         platform_id = "standard-v3"
         cores       = 2
         memory      = 2
@@ -88,7 +88,7 @@ yc_compute_instances_db = {
 
     db-node3 = {
 
-        name        = "pxc3"
+        name        = "pgdb3"
         platform_id = "standard-v3"
         cores       = 2
         memory      = 2
@@ -99,4 +99,44 @@ yc_compute_instances_db = {
     }
 
 
+}
+
+
+yc_compute_instances_elk = {
+
+    elk-node1 = {
+
+        name        = "elk-node1"
+        platform_id = "standard-v3"
+        cores       = 2
+        memory      = 2
+        size        = 10
+        type        = "network-hdd"
+        nat         = true
+        ip_address  = "10.0.1.10"
+        }
+    
+    elk-node2 = {
+
+        name        = "elk-node2"
+        platform_id = "standard-v3"
+        cores       = 2
+        memory      = 2
+        size        = 10
+        type        = "network-hdd"
+        nat         = true
+        ip_address  = "10.0.1.11"
+    }
+
+    elk-node3 = {
+
+        name        = "elk-node3"
+        platform_id = "standard-v3"
+        cores       = 2
+        memory      = 2
+        size        = 10
+        type        = "network-hdd"
+        nat         = true
+        ip_address  = "10.0.1.12"
+    }
 }

@@ -1,0 +1,15 @@
+---
+- name: Append additional host entries to /etc/hosts file
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"
+    state: present
+  with_items:
+    - "10.0.1.5 backend1"
+    - "10.0.1.6 backend2"
+    - "10.0.1.7 pgdb1"
+    - "10.0.1.8 pgdb2"
+    - "10.0.1.9 pgdb3"
+    - "10.0.1.10 os1"
+    - "10.0.1.11 os2"
+    - "10.0.1.12 os3"

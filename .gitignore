@@ -14,3 +14,4 @@ ansible/inventory
 ## Code
 
 /.vscode/settings.json
+.vscode

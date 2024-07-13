@@ -1,0 +1,19 @@
+sources:
+  app_logs:
+    type: file
+    include: ["/var/log/syslog"]
+
+sinks:
+  elasticsearch:
+    type: elasticsearch
+    inputs: ["app_logs"]
+    endpoints:
+      - "https://10.0.1.10:9200"
+    bulk:
+      index: "app-logs-%Y.%m.%d"
+    tls:
+      verify_certificate: false
+    auth:
+      strategy: "basic"
+      user: "admin"
+      password: "qwerty123"
