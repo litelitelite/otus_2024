@@ -4,6 +4,14 @@ sources:
     include: ["/var/log/postgresql/*.log"]
 
 sinks:
+  kafka_sink:
+    type: kafka
+    inputs: ["db_logs"]
+    brokers:
+      - "https://10.0.1.7:9200"
+    topic: "db_logs_topic"
+
+sinks:
   elasticsearch:
     type: elasticsearch
     inputs: ["db_logs"]

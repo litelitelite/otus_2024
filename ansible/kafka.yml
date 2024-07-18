@@ -1,0 +1,62 @@
+---
+- name: Install Kafka on a Single Node
+  hosts: "{{ groups['db'][0] }}"
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Update apt package cache and install openjdk
+      ansible.builtin.apt:
+        update_cache: true
+        name: openjdk-8-jre
+        state: present
+
+    - name: Check arch is exists
+      ansible.builtin.stat:
+        path: /opt/kafka_2.13-2.8.1.tgz
+      register: arch
+
+    - name: Download Apache Kafka
+      ansible.builtin.get_url: 
+        url: https://archive.apache.org/dist/kafka/2.8.1/kafka_2.13-2.8.1.tgz 
+        dest: /opt/
+      when: not arch.stat.exists
+
+    - name: Extract Kafka archive
+      ansible.builtin.unarchive:
+        src: /opt/kafka_2.13-2.8.1.tgz 
+        dest: /opt/
+        remote_src: true
+
+    - name: Create Kafka data directory
+      ansible.builtin.file: 
+        path: /opt/kafka_2.13-2.8.1/data
+        state: directory
+
+    - name: Update Kafka configuration
+      ansible.builtin.lineinfile:
+        path: /opt/kafka_2.13-2.8.1/config/server.properties
+        line: "{{ item }}"
+        state: present
+      with_items:
+        - advertised.listeners=PLAINTEXT://10.0.1.7:9092
+        - log.dirs=/opt/kafka_2.13-2.8.1/data
+        - num.partitions=3
+        - default.replication.factor=3
+
+    - name: Start Zookeeper
+      ansible.builtin.command: /opt/kafka_2.13-2.8.1/bin/zookeeper-server-start.sh -daemon /opt/kafka_2.13-2.8.1/config/zookeeper.properties
+
+    - name: Start Kafka
+      ansible.builtin.command: /opt/kafka_2.13-2.8.1/bin/kafka-server-start.sh -daemon /opt/kafka_2.13-2.8.1/config/server.properties
+
+- name: Create Kafka Topics
+  hosts: "{{ groups['db'][0] }}"
+  tasks:
+    - name: Create Topic app_logs_topic
+      ansible.builtin.command: /opt/kafka_2.13-2.8.1/bin/kafka-topics.sh --create --topic app_logs_topic --partitions 3 --replication-factor 1 --bootstrap-server 10.0.1.7:9092
+
+    - name: Create Topic db_logs_topic
+      ansible.builtin.command: /opt/kafka_2.13-2.8.1/bin/kafka-topics.sh --create --topic db_logs_topic --partitions 3 --replication-factor 1 --bootstrap-server 10.0.1.7:9092
+
+    - name: Create Topic nginx_logs_topic
+      ansible.builtin.command: /opt/kafka_2.13-2.8.1/bin/kafka-topics.sh --create --topic nginx_logs_topic --partitions 3 --replication-factor 1 --bootstrap-server 10.0.1.7:9092

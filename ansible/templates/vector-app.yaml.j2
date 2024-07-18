@@ -4,6 +4,14 @@ sources:
     include: ["/var/log/syslog"]
 
 sinks:
+  kafka_sink:
+    type: kafka
+    inputs: ["app_logs"]
+    brokers:
+      - "https://10.0.1.7:9200"
+    topic: "app_logs_topic"
+
+sinks:
   elasticsearch:
     type: elasticsearch
     inputs: ["app_logs"]

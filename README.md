@@ -1,7 +1,7 @@
-# lession-13-elk
+# lession-15-kafka
 
 
-## This code create VMs in YC and provision Nginx, PGSQL patroni cluster and simple python flask app with haproxy balancer. Also here's OpenSearch monitoring, which collect logs from all nodes through vector. For installing OpenSearch using https://github.com/opensearch-project/ansible-playbook.
+## This code create VMs in YC and provision Nginx, PGSQL patroni cluster and simple python flask app with haproxy balancer. Also here's OpenSearch monitoring, which collect logs from all nodes through vector, using kafka and logstash. For installing OpenSearch uses https://github.com/opensearch-project/ansible-playbook.
 
 ### Usage
 
@@ -70,6 +70,21 @@ http://158.160.66.42:8008/
 
 curl https://localhost:9200 -u 'admin:qwerty123' --insecure
 
+### Examples OpenSearch
+
+See catalog examples
+
+### Examples Kafka
+
+```
+Command ###
+./kafka-topics.sh --list --bootstrap-server 10.0.1.7:9092
+
+Result ###
+app_logs_topic
+db_logs_topic
+nginx_logs_topic
+```
 ### Destroy env
 
 Run command `terraform destroy -var-file=terraform.tfvars -auto-approve`

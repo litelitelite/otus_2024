@@ -24,3 +24,6 @@
 
 - name: Install vector
   ansible.builtin.import_playbook: vector.yml
+
+- name: Install kafka
+  ansible.builtin.import_playbook: kafka.yml
