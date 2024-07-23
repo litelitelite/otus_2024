@@ -7,3 +7,9 @@
 
 - name: Install python flask backend
   ansible.builtin.import_playbook: backend.yml
+
+- name: Install consul server
+  ansible.builtin.import_playbook: consul-server.yml
+
+- name: Install consul agent
+  ansible.builtin.import_playbook: consul-agent.yml

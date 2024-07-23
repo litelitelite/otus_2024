@@ -30,7 +30,7 @@ resource "yandex_lb_network_load_balancer" "otus-alb" {
       healthy_threshold   = 2
       http_options {
         port = 80
-        path = "/app"
+        path = "/html"
       }
   }
 }
