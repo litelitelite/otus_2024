@@ -1,7 +1,7 @@
-# lession-11-pgsql-patroni
+# lession-16-consul
 
 
-## This code create VMs in YC and provision Nginx, PGSQL patroni cluster and simple python flask app with haproxy balancer.
+## This code create VMs in YC and provision Nginx, PGSQL patroni cluster and simple python flask app with haproxy balancer. Also here is consul cluster on patroni nodes with nginx web-services.
 
 ### Usage
 
@@ -49,14 +49,52 @@ Example:
 
 http://158.160.76.21:8008/
 
-```
+```json
 {"state": "running", "postmaster_start_time": "2024-07-01 16:33:05.820991+00:00", "role": "replica", "server_version": 140012, "xlog": {"received_location": 67491496, "replayed_location": 67491496, "replayed_timestamp": "2024-07-01 16:39:07.265311+00:00", "paused": false}, "timeline": 2, "dcs_last_seen": 1719852036, "database_system_identifier": "7386673811145480129", "patroni": {"version": "2.1.3", "scope": "TestCluster"}}
 ```
 
 http://158.160.66.42:8008/
 
-```
+```json
 {"state": "running", "postmaster_start_time": "2024-07-01 14:27:23.986593+00:00", "role": "master", "server_version": 140012, "xlog": {"location": 67491496}, "timeline": 2, "replication": [{"usename": "admin", "application_name": "etcd2", "client_addr": "10.0.1.8", "state": "streaming", "sync_state": "async", "sync_priority": 0}, {"usename": "admin", "application_name": "etcd1", "client_addr": "10.0.1.7", "state": "streaming", "sync_state": "async", "sync_priority": 0}], "dcs_last_seen": 1719852076, "database_system_identifier": "7386673811145480129", "patroni": {"version": "2.1.3", "scope": "TestCluster"}}
+```
+
+### Check web DNS
+
+```bash
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.3
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.3
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.4
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.3
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.3
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.4
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.3
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.dc1.consul | wc -l
+2
+```
+
+After stopping one of nodes
+
+```bash
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.4
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.4
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.4
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.4
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
+10.0.1.4
+ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.dc1.consul | wc -l
+1
 ```
 
 ### Test failover methods
