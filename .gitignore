@@ -2,6 +2,7 @@
 key.json
 
 ## TF files
+.terraform
 terraform/terraform.tfvars
 terraform/locals.tf
 terraform/.terraform/*
@@ -13,4 +14,4 @@ ansible/inventory
 
 ## Code
 
-/.vscode/settings.json
+.vscode

@@ -1,93 +1,46 @@
-variable "service_account_key_file" {
-  type        = string
-  description = "Yandex Cloud SA key file"
+variable "proxmox_api_url" {
+  default = "https://<cluster_or_node_ip>:8006/api2/json"
 }
 
-variable "cloud_id" {
-  type        = string
-  description = "Yandex Cloud cloud_id"
+variable "proxmox_api_token_id" {
+  default = "<api_token_id>"
 }
 
-variable "image_id" {
-  type        = string
-  description = "Yandex Cloud image_id"
-  default     = "fd83m7rp3r4l12c2keph"
+variable "proxmox_api_token_secret" {
+  default = "<api_token_proxmox>"
 }
 
-variable "folder_id" {
-  type        = string
-  description = "Yandex Cloud folder_id"
+variable "ssh_key" {
+  default = "<pub_ssh_key>"
 }
 
-variable "yc_zone" {
-  type        = string
-  description = "Yandex Cloud compute default zone"
-  default     = "ru-central1-b"
-}
-
-variable "local_admin_private_key_path" {
-  type        = string
-  description = "Private key path"
-}
-
-variable "local_admin_public_key_path" {
-  type        = string
-  description = "Public key path"
-}
-
-variable "local_admin" {
-  type        = string
-  description = "Local admin name"
-}
-
-
-variable "yc_compute_instances_backend" {
-    type = map(object({
-    name        = string
-    platform_id = string
-    cores       = number
-    memory      = number
-    size        = number
-    type        = string
-    nat         = bool
-    ip_address  = string
-  }))
-}
-
-
-variable "yc_compute_instances_nginx" {
-    type = map(object({
-    name        = string
-    platform_id = string
-    cores       = number
-    memory      = number
-    size        = number
-    type        = string
-    nat         = bool
-    ip_address  = string
-  }))
-}
-
-
-variable "yc_compute_instances_db" {
-    type = map(object({
-    name        = string
-    platform_id = string
-    cores       = number
-    memory      = number
-    size        = number
-    type        = string
-    nat         = bool
-    ip_address  = string
-  }))
-}
-
-variable "otus_network_name" {
-  type = string
-  default = "otus-learning" ## Provide your network name
-}
-
-variable "otus_subnet_name" {
-  type = string
-  default = "otus-learning-ru-central1-b" ## Provide your subnet name
+variable "virtual_machines" {
+  default = {
+    "otus-test-01" = {
+      hostname    = "otus-test-01",
+      ip_address  = "192.168.10.2/24",
+      gateway     = "192.168.10.1",
+      target_node = "<proxmox_node_name>",
+      cpu_cores   = 2,
+      cpu_sockets = 1,
+      memory      = "1024",
+      hdd_size    = "5G",
+      vm_template = "<vm_template_name>",
+      ciuser      = "<vm_username>",
+      cipassword  = "<vm_password>",
+    },
+    "tf-test-02" = {
+      hostname    = "tf-test-02",
+      ip_address  = "192.168.10.3/24",
+      gateway     = "192.168.10.1",
+      target_node = "<proxmox_node_name>",
+      cpu_cores   = 2,
+      cpu_sockets = 1,
+      memory      = "1024",
+      hdd_size    = "5G",
+      vm_template = "<vm_template_name>",
+      ciuser      = "<vm_username>",
+      cipassword  = "<vm_password>",
+    },
+  }
 }

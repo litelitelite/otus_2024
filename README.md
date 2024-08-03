@@ -1,115 +1,64 @@
-# lession-16-consul
+# lession-18-proxmox
 
+## This code create ProxMox instance from vagrant and provisioning Ansible, and then deploy 2 VMs with Terraform (using telmate plugin for terraform).
 
-## This code create VMs in YC and provision Nginx, PGSQL patroni cluster and simple python flask app with haproxy balancer. Also here is consul cluster on patroni nodes with nginx web-services.
+## Prerequirements
+
+- After deploy ProxMox on node (you can do this through Ansbile provision by the way):
+
+```
+cd /var/lib/vz/template/iso
+
+wget http://cloud-images.ubuntu.com/releases/focal/release/ubuntu-20.04-server-cloudimg-amd64.img
+
+sudo apt install libguestfs-tools -y && sudo virt-customize -a ubuntu-20.04-server-cloudimg-amd64.img --install qemu-guest-agent
+```
+
+- Create VM:
+
+```
+qm create 9001 \
+  --name ubuntu-2004-cloud-init --numa 0 --ostype l26 \
+  --cpu cputype=host --cores 2 --sockets 1 \
+  --memory 1024  \
+  --net0 virtio,bridge=vmbr10
+
+qm importdisk 9001 ubuntu-20.04-server-cloudimg-amd64.img local
+qm set 9001 --scsihw virtio-scsi-pci --scsi0 local:9001/vm-9001-disk-0.raw
+qm set 9001 --ide2 local:cloudinit
+qm set 9001 --boot c --bootdisk scsi0
+qm set 9001 --serial0 socket --vga serial0
+qm set 9001 --agent enabled=1
+qm template 9001
+```
+- Through WebIU:
+
+ 1. Generate API_TOKEN 
+ 2. Add permissions for storage through API
+
+After that you can deploy VMs through terraform.
 
 ### Usage
 
-- Create catalog in YC with S3 bucket and SA with `storage.uploader` role.
-- Provide `cloud_id`, `folder_id`, `service_account_key_file`.
-- Provide `bucket`, `access_key` and `secret_key` in backend.tf
-- Provide needed variables in terraform.tfvars file
+- Provide needed variables into terraform/variables.tf
 
-Then run this commands from `terraform` directory:
+Run this commands from `vagrant` directory:
+
+- `vagrant up`
+
+Run command from `terraform` directory:
 
 - `terraform init -backend-config=state.name -reconfigure`
 - `terraform apply -var-file=terraform.tfvars -auto-approve`
-- `ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ubuntu -i ../ansible/inventory --private-key ~/.ssh/id_rsa ../ansible/site.yml`
-
-Ansible inventory generate dynamicly
-
-## Check for APP and static content
-
-After deploy you can check app, or static content from Nginx load balancer public_ip by getting `nginx_instance_external_ip` from
-tf output and then put in on your browser. 
-
-`http://nginx_instance_external_ip/app` - path to simple flask page counter with RedisDB
-`http://nginx_instance_external_ip/html` - path to simple static page from app-nodes
-
-Also you can check it by access external YC load_balancer_ip
-
-Examples:
-
-`http://158.160.156.201/html` or `http://158.160.156.201/app/`
-
-## Check HAPROXY
-
-See backend_external_ip
-
-Example:
-
-http://158.160.65.231:7000/
-
-## Check PATRONI status
-
-
-See any endpoint in 8008 port in external_ip_pgdb
-
-Example:
-
-http://158.160.76.21:8008/
-
-```json
-{"state": "running", "postmaster_start_time": "2024-07-01 16:33:05.820991+00:00", "role": "replica", "server_version": 140012, "xlog": {"received_location": 67491496, "replayed_location": 67491496, "replayed_timestamp": "2024-07-01 16:39:07.265311+00:00", "paused": false}, "timeline": 2, "dcs_last_seen": 1719852036, "database_system_identifier": "7386673811145480129", "patroni": {"version": "2.1.3", "scope": "TestCluster"}}
-```
-
-http://158.160.66.42:8008/
-
-```json
-{"state": "running", "postmaster_start_time": "2024-07-01 14:27:23.986593+00:00", "role": "master", "server_version": 140012, "xlog": {"location": 67491496}, "timeline": 2, "replication": [{"usename": "admin", "application_name": "etcd2", "client_addr": "10.0.1.8", "state": "streaming", "sync_state": "async", "sync_priority": 0}, {"usename": "admin", "application_name": "etcd1", "client_addr": "10.0.1.7", "state": "streaming", "sync_state": "async", "sync_priority": 0}], "dcs_last_seen": 1719852076, "database_system_identifier": "7386673811145480129", "patroni": {"version": "2.1.3", "scope": "TestCluster"}}
-```
-
-### Check web DNS
-
-```bash
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.3
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.3
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.4
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.3
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.3
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.4
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.3
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.dc1.consul | wc -l
-2
-```
-
-After stopping one of nodes
-
-```bash
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.4
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.4
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.4
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.4
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.consul | head -n1
-10.0.1.4
-ubuntu@epdhqo1dt1rubhkflel9:~$ dig +short @127.0.0.1 -p 8600 web.service.dc1.consul | wc -l
-1
-```
-
-### Test failover methods
-
-- You can stop patroni on any pgdb node
-- You can stop any app node
-- You can stop any nginx balancer
-- You can stop any haproxy balancer
 
 ### Destroy env
 
-Run command `terraform destroy -var-file=terraform.tfvars -auto-approve`
+Run command `terraform destroy -var-file=terraform.tfvars -auto-approve` from `terraform` directory
+Then run command `vagrant destroy` from `vagrant` directory.
 
 ### Requirements
 
 `ansible-core`
 `terraform`
-`yc`
+`vagrant`
+`telmate plugin for terraform`
