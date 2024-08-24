@@ -1,0 +1,5 @@
+---
+base:
+  '*':
+    - epel-release
+    - nginx
