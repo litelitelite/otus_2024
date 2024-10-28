@@ -1,0 +1,10 @@
+---
+- name: Include nftables service
+  include_tasks: nftables.yaml
+
+- name: Include selinux setting
+  include_tasks: selinux.yaml
+  when: ansible_os_family == "RedHat"
+
+- name: Include install
+  include_tasks: install.yaml

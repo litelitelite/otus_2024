@@ -1,0 +1,5 @@
+domain: "example.com"
+ntp_timezone: "UTC"
+pcs_password: "strong_pass"
+cluster_name: "hacluster"
+subnet_cidrs: "{ 10.10.10.0/24, }"
